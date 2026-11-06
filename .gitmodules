@@ -1,0 +1,9 @@
+[submodule "anndata"]
+	path = anndata
+	url = git@github.com:tumlinso/anndatapp.git
+[submodule "velocity"]
+	path = velocity
+	url = git@github.com:tumlinso/velocity.git
+[submodule "preprocess"]
+	path = preprocess
+	url = git@github.com:tumlinso/preprocess.cppm.git
