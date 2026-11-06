@@ -10,11 +10,13 @@ import statistics
 import subprocess
 import time
 
+ROOT = Path(__file__).resolve().parents[2]
+
 
 def main():
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument("--driver", type=Path, required=True)
-    p.add_argument("--output", type=Path, default=Path("benchmarks/results/runtime.json"))
+    p.add_argument("--output", type=Path, default=ROOT / "build/qualification/preprocess-runtime.json")
     p.add_argument("--rows", type=int, default=2048)
     p.add_argument("--columns", type=int, default=512)
     p.add_argument("--repeats", type=int, default=3)

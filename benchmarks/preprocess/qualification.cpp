@@ -80,26 +80,54 @@ static int run(const std::string& op, const std::string& layout, std::size_t n, 
     bool sparse = layout == "csr";
     std::size_t nnz = 0;
     auto x = input<T>(n, m, sparse, nnz);
-    if (op == "hvg") {
-        preprocess::normalize_total(x.edit(), {.target_sum = 1e4});
-        preprocess::log1p(x.edit());
-    }
-    std::optional<preprocess::QcResult> qc;
-    std::optional<preprocess::FeatureStats> stats;
-    std::optional<preprocess::Normalization> norm;
-    std::optional<preprocess::Scaling> scale;
-    std::optional<preprocess::HvgResult> hvg;
+    auto xv = x.view(); auto xe = x.edit();
+    std::optional<preprocess::DenseInput> di; std::optional<preprocess::DenseOutput> dout;
+    std::optional<preprocess::SparseInput> si; std::optional<preprocess::SparseOutput> sout;
+    if (sparse) { si.emplace(xv.sparse_bytes()); sout.emplace(xe.sparse_bytes()); }
+    else { di.emplace(xv.bytes()); dout.emplace(xe.bytes()); }
+    preprocess::NormalizationOptions no; no.target_is_set = true; no.target_sum = 1e4;
+    std::vector<double> factors(n), row_scratch(n), totals(n), gene_total(m), mean(m), dropout(m), dev(m), qc_scratch(m);
+    std::vector<std::uint8_t> included(m); std::vector<std::uint64_t> cell_detected(n), gene_detected(m), stats_scratch(m);
+    preprocess::NormalizationBuffers norm{factors.data(),n,included.data(),m,row_scratch.data(),n};
+    preprocess::QcOptions qo;
+    preprocess::QcBuffers qb; qb.cell_total=totals.data(); qb.cell_detected=cell_detected.data(); qb.cells_capacity=n;
+    qb.gene_total=gene_total.data(); qb.gene_detected=gene_detected.data(); qb.genes_capacity=m;
+    qb.mean=mean.data(); qb.dropout=dropout.data();
+    preprocess::ScaleOptions so; so.zero_center=!sparse;
+    auto normalize = [&]() { return sparse ? preprocess::normalize_into(*si,xv.dtype(),xv.layout(),*sout,xv.dtype(),xv.layout(),no,norm)
+                                           : preprocess::normalize_into(*di,xv.dtype(),*dout,xv.dtype(),no,norm); };
+    auto logarithm = [&]() { return sparse ? preprocess::log1p_into(*si,xv.dtype(),xv.layout(),*sout,xv.dtype(),xv.layout())
+                                          : preprocess::log1p_into(*di,xv.dtype(),*dout,xv.dtype()); };
+    if (op == "hvg" && (!normalize() || !logarithm())) throw std::runtime_error("HVG preprocessing failed");
+    preprocess::HvgOptions ho; ho.has_top=true; ho.n_top_genes=m/4;
+    std::size_t scratch_bytes=0; auto hs=preprocess::hvg_scratch_bytes(m,1,ho,scratch_bytes);
+    if (hs.code != preprocess::HvgCode::ok) throw std::runtime_error("HVG sizing failed");
+    std::vector<std::byte> hscratch(scratch_bytes + alignof(std::max_align_t)-1);
+    auto address = reinterpret_cast<std::uintptr_t>(hscratch.data());
+    auto aligned = (address + alignof(std::max_align_t)-1) & ~(std::uintptr_t(alignof(std::max_align_t)-1));
+    void* hworkspace = hscratch.data() + (aligned-address);
+    std::vector<double> dispersion(m), normalized_dispersion(m);
+    std::vector<std::uint8_t> selected(m), intersection(m); std::vector<std::size_t> batches(m);
+    preprocess::HvgOutput hout{mean.data(),dispersion.data(),normalized_dispersion.data(),selected.data(),intersection.data(),batches.data(),m};
     long before = peak_rss();
     auto t = std::chrono::steady_clock::now();
     counting.store(true, std::memory_order_relaxed);
-    if (op == "qc") qc.emplace(preprocess::qc(x.view()));
-    else if (op == "stats") stats.emplace(preprocess::feature_stats(x.view()));
-    else if (op == "normalize") norm.emplace(preprocess::normalize_total(x.edit(), {.target_sum = 1e4}));
-    else if (op == "log1p") preprocess::log1p(x.edit());
-    else if (op == "scale") scale.emplace(preprocess::scale(x.edit(), {.zero_center = !sparse}));
-    else if (op == "hvg") hvg.emplace(preprocess::highly_variable_genes(x.view(), {.n_top_genes = m / 4}));
-    else if (op != "baseline") throw std::invalid_argument("unknown operation");
+    preprocess::QcStatus status; std::size_t observations=0;
+    if (op == "qc") status = sparse ? preprocess::qc(*si,xv.dtype(),xv.layout(),qo,qb,qc_scratch.data(),qc_scratch.size())
+                                     : preprocess::qc(*di,xv.dtype(),qo,qb,qc_scratch.data(),qc_scratch.size());
+    else if (op == "stats") status = sparse ? preprocess::feature_stats(*si,xv.dtype(),xv.layout(),nullptr,mean.data(),dev.data(),m,stats_scratch.data(),m,&observations)
+                                              : preprocess::feature_stats(*di,xv.dtype(),nullptr,mean.data(),dev.data(),m,stats_scratch.data(),m,&observations);
+    else if (op == "normalize") status=normalize();
+    else if (op == "log1p") status=logarithm();
+    else if (op == "scale") status = sparse ? preprocess::scale_into(*si,xv.dtype(),xv.layout(),*sout,xv.dtype(),xv.layout(),so,mean.data(),dev.data(),m,stats_scratch.data(),m)
+                                              : preprocess::scale_into(*di,xv.dtype(),*dout,xv.dtype(),so,mean.data(),dev.data(),m,stats_scratch.data(),m);
+    else if (op == "hvg") {
+        if (sparse) hs=preprocess::hvg_sparse(si->values(),xv.dtype(),si->indices(),si->offsets(),si->index_size(),si->offset_size(),xv.layout(),n,m,si->nnz(),nullptr,1,ho,hout,hworkspace,scratch_bytes);
+        else hs=preprocess::hvg_dense(di->data(),xv.dtype(),n,m,di->stride_bytes(0),di->stride_bytes(1),nullptr,1,ho,hout,hworkspace,scratch_bytes);
+    }
     counting.store(false, std::memory_order_relaxed);
+    if (!status || hs.code != preprocess::HvgCode::ok) throw std::runtime_error("benchmark operation failed");
+    if (op != "baseline" && op != "qc" && op != "stats" && op != "normalize" && op != "log1p" && op != "scale" && op != "hvg") throw std::invalid_argument("unknown operation");
     double ms = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - t).count();
     auto allocated_calls = calls.load(), allocated_bytes = bytes.load();
     long peak = peak_rss();

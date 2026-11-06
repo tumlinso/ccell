@@ -30,7 +30,7 @@ import scanpy as sc
 from scipy import sparse
 from scanpy.preprocessing._utils import _get_mean_var
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 VERSION = "1.11.5"
 FLOAT_TOL = {32: (1e-5, 1e-6), 64: (1e-8, 1e-10), 0: (1e-5, 1e-6)}
 EXACT_FIELDS = {"cell_detected", "gene_detected", "cells", "genes", "selected", "included", "nbatches", "intersection",
@@ -298,22 +298,26 @@ def source_info():
     if versions["scanpy"] != VERSION:
         raise RuntimeError(f"Scanpy {VERSION} is required; found {versions['scanpy']}")
     hashes = {f: hashlib.sha256((base / f).read_bytes()).hexdigest() for f in files}
-    native_sources = [str(p.relative_to(ROOT)) for p in sorted((ROOT / "src").rglob("*"))
+    native_sources = [str(p.relative_to(ROOT)) for p in sorted((ROOT / "src/preprocess").rglob("*"))
                       if p.suffix in (".cppm", ".cpp", ".hpp")]
-    native_sources.append("tests/interop_driver.cpp")
+    native_sources.append("tests/preprocess/interop_driver.cpp")
+    native_sources.extend(f"tests/preprocess/{name}" for name in
+                          ("qualification_helpers.hpp", "annotation_fixture.hpp"))
     native_hashes = {p: hashlib.sha256((ROOT / p).read_bytes()).hexdigest() for p in native_sources}
     return {"versions": versions, "scanpy_source_sha256": hashes, "native_source_sha256": native_hashes,
             "qualifier_sha256": hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
-            "requirements_sha256": hashlib.sha256((ROOT / "tests/requirements-reference.txt").read_bytes()).hexdigest(),
+            "requirements_sha256": hashlib.sha256((ROOT / "tests/preprocess/requirements-reference.txt").read_bytes()).hexdigest(),
             "python": sys.version.split()[0], "fixture_seed": 821047}
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--driver", type=Path, required=True)
-    parser.add_argument("--output", type=Path, default=ROOT / "tests/results/reference.json")
+    parser.add_argument("--output", type=Path, default=ROOT / "build/qualification/preprocess-reference.json")
     args = parser.parse_args()
     driver = args.driver.resolve(strict=True)
+    if args.output.resolve() == (ROOT / "tests/preprocess/results/reference.json").resolve():
+        parser.error("refusing to overwrite the preserved historical reference report")
     provenance = source_info()
     x, groups, observations, batches = inputs()
     with np.errstate(all="ignore"):

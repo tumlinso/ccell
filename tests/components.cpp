@@ -10,7 +10,7 @@ import velocitypp;
 import velocitypp.precision;
 
 static_assert(std::is_same_v<ccell::anndata::Array, anndatapp::Array>);
-static_assert(std::is_same_v<ccell::preprocess::FeatureStats, preprocess::FeatureStats>);
+static_assert(std::is_same_v<ccell::preprocess::QcStatus, preprocess::QcStatus>);
 static_assert(std::is_same_v<ccell::velocity::PreparedInput, velocitypp::PreparedInput>);
 
 #include "workflow.hh"

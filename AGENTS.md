@@ -2,9 +2,16 @@
 
 ccell owns a C++20 reference biology package. AnnData++ and Velocity++ are
 standalone dependencies included as Git submodules; preprocessing is local
-ccell source. Cellerator is a downstream consumer and the home of FP16 and
+ccell source under src/preprocess. Dependencies live in external/. Cellerator is a downstream consumer and the home of FP16 and
 specialized device implementations. Do not add a Cellerator dependency to
 this reference package.
+
+Read [coding_style.md](coding_style.md) before numerical design, implementation,
+or review. It is binding authority: do not weaken, replace, move, or remove it,
+or its protection here, without explicit user authorization. The standard
+reference allocates nothing; callers supply all outputs, preparation, and scratch.
+Consumer replacements may allocate explicitly. Shipped source and examples use
+minimal scalar headers and compiler builtins, without STL machinery.
 
 Public imports are `ccell`, `ccell.anndata`, `ccell.preprocess`, and
 `ccell.velocity`. Re-export the existing component modules and preserve

@@ -10,8 +10,8 @@ execution visible.
 - Use arrays, pointers, references, dimensions, and strides that show where
   values come from and where they go. Describe ownership, aliasing, and byte
   versus element strides precisely.
-- Make allocation, conversion, copying, and materialization deliberate.
-  Reuse caller-provided storage where it helps.
+- The standard reference allocates nothing in sizing, validation, preparation,
+  binding, or execution. All outputs and scratch are supplied by the caller.
 - Use small structs and ordinary free functions for data and computations.
   Introduce classes for ownership or real invariants. Do not add callback
   layers, wrapper hierarchies, or generic frameworks without a concrete user.
@@ -21,7 +21,7 @@ execution visible.
 - Keep C++20 named-module interfaces small and independently compiled.
   Benchmark runtime or build-cost claims on identical workloads.
 
-Follow the written
-[Cellerator C++ coding style](/home/tumlinson/Cellerator/coding_style.md),
-not the implementation of another project. Keep that guide unchanged. Fast
-imports and consumer recompilation remain important.
+Follow the binding [ccell numerical style](../../coding_style.md), including its
+minimal include policy, strict numerical rules, and downstream replacement
+contracts. The Cellerator style is its baseline and remains unchanged. Fast
+imports and consumer recompilation are required.

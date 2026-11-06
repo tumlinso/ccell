@@ -1,89 +1,79 @@
 # ccell
 
-A C++20 biology package with explicit reference calculations, native data
-access, and composable named modules. AnnData++ provides the data model,
-preprocessing is local source, and Velocity++ provides RNA velocity.
-Cellerator can consume these reference contracts and supply specialized
-implementations.
+ccell is a C++20 numerical development reference for single-cell methods. It
+exposes calculations, arrays, pointers, layouts, working storage, and execution
+to competent developers. The standard reference allocates nothing: callers
+provide inputs, outputs, preparation storage, intermediate buffers, and scratch.
+AnnData++ owns biological data and storage; callers acquire it explicitly before
+reference calculation. Caller threads own scheduling and synchronization.
+
+Consumers may replace a primitive, connected region, or complete algorithm with
+novel mathematics and representations. Compile-time templates and runtime typed
+function pointers support caller-defined state. Custom layouts can persist
+through an entire replacement region; conversion is required only where that
+region connects to retained code. Replacements may allocate explicitly.
+Cellerator is a downstream consumer, not a dependency of this package.
+
+Read the binding [coding style](coding_style.md) before numerical development.
+It extends Cellerator's compact numerical style with minimal scalar includes,
+compiler builtins, visible data structures, and allocation-free reference work.
+Development-only tests and qualification tools may use ordinary library code.
+AnnData++ is the explicit exception for the existing data model and ownership.
 
 ```cpp
-import ccell;             // Re-exports all three components.
-
-// Or import components individually:
+import ccell;             // All three components, with the same component types.
+// Or:
 import ccell.anndata;     // Re-exports anndatapp.
-import ccell.preprocess;  // Re-exports the local preprocess module.
+import ccell.preprocess;  // Re-exports preprocess.
 import ccell.velocity;    // Re-exports velocitypp and velocitypp.precision.
 ```
 
-The component imports expose `ccell::anndata`, `ccell::preprocess`, and
-`ccell::velocity` as namespace aliases. The original namespaces and standalone
-AnnData++ and Velocity++ modules remain available. These imports share the
-same types, ownership, and implementations; they do not copy or wrap datasets.
-The dots are part of C++ named-module names, not a separate submodule mechanism.
+The namespace aliases are `ccell::anndata`, `ccell::preprocess`, and
+`ccell::velocity`. Original module and namespace identities remain available.
+The component imports do not wrap or copy datasets. Existing STL-bearing and
+allocating numerical calling forms are replaced outright; see the component
+API documentation for caller-storage interfaces.
 
-## Build
+## Build and install
 
-Use Clang 18 or newer with matching `clang-scan-deps`, CMake 3.28 or newer,
-and Ninja 1.11 or newer. Initialize the AnnData++ and Velocity++ submodules:
+Use Clang 18 with matching `clang-scan-deps`, CMake 3.28 or newer, and Ninja:
 
 ```sh
 git submodule update --init --recursive
 cmake --preset debug
 cmake --build --preset debug
 ctest --preset debug
-```
-
-The debug and release presets build without storage backends. H5AD and Zarr
-can be enabled through `ANNDATAPP_ENABLE_HDF5` and `ANNDATAPP_ENABLE_ZARR`;
-see [AnnData++ storage dependencies](anndata/docs/storage-dependencies.md).
-AnnData++'s own defaults apply when configuring without these presets.
-Python, Torch, CUDA, and Cellerator are not runtime or build dependencies of
-the reference calculation package. Velocity++ accepts FP32/FP64 arrays;
-the FP16 implementation remains in the separate Cellerator checkout.
-
-The root build compiles the component sources together. It does not require
-preinstalled copies of AnnData++, Velocity++, or preprocessing.
-
-## Installed consumers
-
-```sh
 cmake --install build/debug --prefix /path/to/ccell-install
 ```
 
-```cmake
-cmake_minimum_required(VERSION 3.28)
-project(example LANGUAGES CXX)
-set(CMAKE_CXX_EXTENSIONS OFF)
-find_package(ccell CONFIG REQUIRED)
-add_executable(example main.cpp)
-target_link_libraries(example PRIVATE ccell::ccell)
-```
+Release, shared, and sanitizer presets are also provided. Storage backends are
+off in these presets; enable `ANNDATAPP_ENABLE_HDF5` or `ANNDATAPP_ENABLE_ZARR`
+explicitly when wanted. [Storage dependencies](external/anndatapp/docs/storage-dependencies.md)
+remain private to AnnData++. Python, Scanpy, Torch, CUDA, and Cellerator are not
+runtime dependencies of the reference. Numerical storage is FP32/FP64 where
+supported; Cellerator owns specialized device and FP16 implementations.
 
-Configure the consumer with the supported compiler, Ninja, and
-`-DCMAKE_PREFIX_PATH=/path/to/ccell-install`. The installation includes the
-component libraries, module sources, and CMake metadata. Consumers compile
-module interfaces with their own compatible toolchain.
-Preprocessing is part of the `ccell` build and installation; it has no separate
-configure step or CMake package.
+Installed CMake consumers use `find_package(ccell CONFIG REQUIRED)` and link
+`ccell::ccell`. Configure with the compatible compiler, Ninja, and
+`-DCMAKE_PREFIX_PATH=/path/to/ccell-install`. Module sources and metadata are
+installed so consumers compile interfaces with their own compatible toolchain.
+Ordinary calculations are separately compiled; selective template customization
+has its explicit consumer compilation cost. Preprocessing has no standalone
+build or installed CONFIG package.
 
-## Source layout
+## Ownership and source layout
 
-- `anndata/`: AnnData++ submodule; annotated data and optional storage adapters.
-- `velocity/`: Velocity++ submodule; standalone FP32/FP64 reference algorithms.
-- `preprocess/`: ordinary ccell source; QC, filtering, normalization, scaling,
-  and highly variable gene selection.
-- `src/ccell.*.cppm` and `ccell.ccm`: component re-exports and umbrella module.
+- `src/ccell.cppm` and component interfaces: umbrella and type-preserving exports.
+- `src/preprocess/`: ccell-owned preprocessing calculations.
+- `external/anndatapp/`: unchanged AnnData++ Git submodule.
+- `external/velocitypp/`: standalone Velocity++ Git submodule.
+- Root tests, examples, tools, docs, benchmarks, and planning records group
+  preprocessing material under their component directories.
 
-The Velocity++ submodule uses
-[tumlinso/velocitypp](https://github.com/tumlinso/velocitypp), with the local
-source directory retained as `velocity/`. Its C++ module, namespace, and CMake
-package use `velocitypp`.
+Git submodule identities and independent histories are preserved. The former
+preprocessing repository history remains locally in `.git/modules/preprocess`;
+`.ccell-local/` retains its recovery records. Historical scientific receipts
+remain historical and do not qualify a changed source snapshot.
 
-The preprocessing repository history is preserved locally in
-`.git/modules/preprocess`; `.ccell-local/` records its original Git pointer
-and revision. The preprocessing files are ordinary ccell source rather than
-a submodule. No remote repository was deleted.
-
-The root [LICENSE](LICENSE) retains the preprocessing implementation's MIT
-notice. [Third-party notices](THIRD_PARTY_NOTICES.md) retain Scanpy's notice and
-the bundled dependencies' notices. Both files are included in installations.
+The root [LICENSE](LICENSE) and [third-party notices](THIRD_PARTY_NOTICES.md)
+retain original and upstream notices and are installed with the package.

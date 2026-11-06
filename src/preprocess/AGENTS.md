@@ -16,7 +16,7 @@ neighbors, GPU execution, and dataset orchestration as separate concerns.
 
 ## C++ and numerical style
 
-- Follow STYLE.md and the protected
+- Follow [the root numerical style](../../coding_style.md), STYLE.md, and the protected
   [Cellerator C++ coding style](/home/tumlinson/Cellerator/coding_style.md).
   Keep its reference unchanged.
 - Use C++20 named modules and .cppm interfaces. Public consumption is
@@ -40,15 +40,15 @@ neighbors, GPU execution, and dataset orchestration as separate concerns.
 Use Linux, Clang 18 with matching clang-scan-deps, CMake 3.28 or newer, and
 Ninja 1.11 or newer.
 
-The maintained source is `ccell/preprocess`. Build and validate it through the
-root ccell CMake project as described in [the root README](../README.md). It
+The maintained source is `ccell/src/preprocess`. Build and validate it through the
+root ccell CMake project as described in [the root README](../../README.md). It
 has no standalone configure or package workflow. `CCELL_BUILD_TESTS` includes
 the prefixed native suites and example; `CCELL_BUILD_QUALIFICATION` enables the
 optional Scanpy comparison and native benchmark sources.
 
 Optional Python interoperability is development-only. Its reference environment
-pins Scanpy 1.11.5 and the packages in tests/requirements-reference.txt.
-See docs/development.md and docs/validation.md.
+pins Scanpy 1.11.5 and the packages in tests/preprocess/requirements-reference.txt.
+See ../../docs/preprocess/development.md and ../../docs/preprocess/validation.md.
 
 Performance probes should be bounded to 30 seconds and compare identical
 workloads. Keep source and toolchain identity with results. Do not claim speed
@@ -63,7 +63,7 @@ reference environments, data and raw reports out of Git.
 
 The former `preprocess-cppm` GitHub repository and Project Control registration
 describe historical standalone development. They do not establish current
-ownership or workflow authority; the maintained source is `ccell/preprocess`.
+ownership or workflow authority; the maintained source is `ccell/src/preprocess`.
 
 Use the configured Codex agent profiles for useful independent work. Root
 retains user intent, interface decisions, integration, and acceptance. Use

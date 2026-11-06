@@ -43,7 +43,7 @@ See the [pinned Scanpy 1.11.5 source](https://github.com/scverse/scanpy/tree/1.1
 ## Bundled AnnData++
 
 AnnData++ remains an independently maintained dependency. Its license is
-retained below and in `anndata/LICENSE`.
+retained below and in `external/anndatapp/LICENSE`.
 
 MIT License
 
@@ -70,7 +70,7 @@ SOFTWARE.
 ## Bundled Velocity++
 
 The standalone component retains its own third-party notices in
-`velocity/THIRD_PARTY_NOTICES.md`. They are reproduced below.
+`external/velocitypp/THIRD_PARTY_NOTICES.md`. They are reproduced below.
 
 The numerical methods and independent reference qualification use scVelo's
 published implementation, pinned in the qualification evidence. scVelo is

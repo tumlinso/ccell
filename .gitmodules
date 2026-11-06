@@ -1,6 +1,6 @@
 [submodule "anndata"]
-	path = anndata
+	path = external/anndatapp
 	url = git@github.com:tumlinso/anndatapp.git
 [submodule "velocity"]
-	path = velocity
+	path = external/velocitypp
 	url = git@github.com:tumlinso/velocitypp.git
