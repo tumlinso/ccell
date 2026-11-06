@@ -1,0 +1,8 @@
+cmake_minimum_required(VERSION 3.28)
+project(ccell_consumer LANGUAGES CXX)
+set(CMAKE_CXX_EXTENSIONS OFF)
+find_package(ccell CONFIG REQUIRED)
+foreach(suite IN ITEMS umbrella components)
+  add_executable(consumer_${suite} ../${suite}.cpp)
+  target_link_libraries(consumer_${suite} PRIVATE ccell::ccell)
+endforeach()

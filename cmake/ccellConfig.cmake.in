@@ -1,0 +1,13 @@
+@PACKAGE_INIT@
+include(CMakeFindDependencyMacro)
+find_dependency(anndatapp 1.0 CONFIG REQUIRED)
+find_dependency(velocitypp 0.1 CONFIG REQUIRED)
+include("${CMAKE_CURRENT_LIST_DIR}/ccellModuleProvider.cmake")
+if(NOT TARGET ccell::ccell)
+  include("${CMAKE_CURRENT_LIST_DIR}/ccellTargets.cmake")
+  _ccell_module_provider(ccell::preprocess ccell::preprocess_binary ccell_preprocess_interfaces
+    anndatapp::anndatapp)
+  _ccell_module_provider(ccell::ccell ccell::ccell_binary ccell_module_interfaces
+    anndatapp::anndatapp ccell::preprocess velocitypp::velocitypp)
+endif()
+check_required_components(ccell)
